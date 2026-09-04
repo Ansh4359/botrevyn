@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMADB_PATH=/app/data/chromadb
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: celery -A app.tasks worker --loglevel=info --concurrency=1 --max-tasks-per-child=50
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMADB_PATH=/app/data/chromadb
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

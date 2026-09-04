@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_code_reviewer"]
+
+
+[project]
+name = "ai-code-reviewer"
+version = "0.1.0"
+description = "AI-powered multi-agent code review system"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "langchain>=0.3",
+    "langgraph>=0.4",
+    "langchain-google-genai>=2.0",
+    "langchain-chroma>=0.2",
+    "chromadb>=0.5",
+    "PyGithub>=2.4",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "tiktoken>=0.7",
+    "unidiff>=0.7",
+    "ruff>=0.6",
+]
+
+[project.optional-dependencies]
+openai = ["langchain-openai>=0.3"]
+anthropic = ["langchain-anthropic>=0.3"]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]

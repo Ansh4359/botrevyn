@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotRevyn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50:  '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                            950: '#1e1b4b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .gradient-mesh {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-card {
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1);
+        }
+        .review-row {
+            transition: all 0.15s ease;
+        }
+        .review-row:hover {
+            background-color: #f8fafc;
+        }
+        .verdict-badge {
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .progress-bar {
+            transition: width 1s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 glass bg-white/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg gradient-mesh flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight text-gray-900">BotRevyn</span>
+                    <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-100 text-brand-700">Beta</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% if user %}
+                    <a href="https://github.com/apps/botrevyn/installations/new" target="_blank"
+                       class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Repo
+                    </a>
+                    <div class="h-6 w-px bg-gray-200"></div>
+                    <div class="flex items-center gap-2.5">
+                        <img class="h-8 w-8 rounded-full ring-2 ring-white shadow-sm" src="{{ user.avatar_url }}" alt="{{ user.username }}">
+                        <div class="hidden sm:block">
+                            <p class="text-sm font-semibold text-gray-900 leading-none">{{ user.username }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Free Plan</p>
+                        </div>
+                    </div>
+                    <a href="/auth/logout" class="text-gray-400 hover:text-gray-600 transition-colors" title="Sign out">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ═══════════════════════ HEADER ═══════════════════════ -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+            <p class="text-sm text-gray-500 mt-1">Real-time overview of your automated PR reviews.</p>
+        </div>
+
+        <!-- ═══════════════════════ STATS GRID ═══════════════════════ -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+            <!-- Total Reviews -->
+            <div class="stat-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Reviews</span>
+                    <div class="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">{{ total_reviews }}</p>
+                <p class="text-xs text-gray-400 mt-1">{{ success_rate }}% success rate</p>
+            </div>
+
+            <!-- Total Findings -->
+            <div class="stat-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Issues Found</span>
+                    <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">{{ total_findings }}</p>
+                <p class="text-xs text-gray-400 mt-1">across {{ repos_monitored }} repo{{ 's' if repos_monitored != 1 else '' }}</p>
+            </div>
+
+            <!-- Avg Duration -->
+            <div class="stat-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg. Time</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">{{ avg_duration }}s</p>
+                <p class="text-xs text-gray-400 mt-1">per review</p>
+            </div>
+
+            <!-- Changes Requested -->
+            <div class="stat-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Blocked</span>
+                    <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">{{ changes_count }}</p>
+                <p class="text-xs text-gray-400 mt-1">changes requested</p>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════ VERDICT BREAKDOWN BAR ═══════════════════════ -->
+        {% if total_reviews > 0 %}
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-gray-900">Verdict Distribution</h3>
+                <div class="flex items-center gap-4 text-xs text-gray-500">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Approved ({{ approve_count }})</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Comments ({{ comment_count }})</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Changes ({{ changes_count }})</span>
+                </div>
+            </div>
+            <div class="flex h-3 rounded-full overflow-hidden bg-gray-100">
+                {% set approve_pct = (approve_count / total_reviews * 100) | round(1) %}
+                {% set comment_pct = (comment_count / total_reviews * 100) | round(1) %}
+                {% set changes_pct = (changes_count / total_reviews * 100) | round(1) %}
+                {% if approve_pct > 0 %}
+                <div class="progress-bar bg-emerald-500 rounded-l-full" style="width: {{ approve_pct }}%"></div>
+                {% endif %}
+                {% if comment_pct > 0 %}
+                <div class="progress-bar bg-amber-400" style="width: {{ comment_pct }}%"></div>
+                {% endif %}
+                {% if changes_pct > 0 %}
+                <div class="progress-bar bg-red-500 rounded-r-full" style="width: {{ changes_pct }}%"></div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ═══════════════════════ MAIN CONTENT 2-COL ═══════════════════════ -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- ─── REVIEW ACTIVITY ─── -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+                    <!-- Table header -->
+                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-semibold text-gray-900">Recent Reviews</h2>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">{{ recent_reviews | length }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot"></span>
+                            Live
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100">
+                            <thead>
+                                <tr class="bg-gray-50/60">
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pull Request</th>
+                                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Verdict</th>
+                                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Issues</th>
+                                    <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
+                                    <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                {% for review in recent_reviews %}
+                                <tr class="review-row">
+                                    <!-- PR Link -->
+                                    <td class="px-5 py-3.5">
+                                        <a href="https://github.com/{{ review.repo_full_name }}/pull/{{ review.pr_number }}"
+                                           target="_blank"
+                                           class="group flex items-center gap-2">
+                                            <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900 group-hover:text-brand-700 transition-colors">
+                                                    {{ review.repo_full_name.split('/')[1] }} <span class="text-gray-400 font-normal">#{{ review.pr_number }}</span>
+                                                </p>
+                                                <p class="text-xs text-gray-400 font-mono">{{ review.repo_full_name.split('/')[0] }}</p>
+                                            </div>
+                                            <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-brand-500 transition-colors ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                    </td>
+
+                                    <!-- Status -->
+                                    <td class="px-5 py-3.5 text-center">
+                                        {% if review.status == 'success' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                            OK
+                                        </span>
+                                        {% elif review.status == 'error' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/10" title="{{ review.error_message }}">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                            Err
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/10">
+                                            <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                            Run
+                                        </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Verdict -->
+                                    <td class="px-5 py-3.5 text-center">
+                                        {% if review.verdict == 'APPROVE' %}
+                                        <span class="verdict-badge inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">✓ Approved</span>
+                                        {% elif review.verdict == 'REQUEST_CHANGES' %}
+                                        <span class="verdict-badge inline-flex items-center px-2 py-0.5 rounded-md bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20">✕ Changes</span>
+                                        {% elif review.verdict == 'COMMENT' %}
+                                        <span class="verdict-badge inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20">💬 Comment</span>
+                                        {% else %}
+                                        <span class="verdict-badge inline-flex items-center px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-500/20">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Findings count -->
+                                    <td class="px-5 py-3.5 text-center">
+                                        {% if review.findings_count > 0 %}
+                                        <span class="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 rounded-md text-xs font-bold
+                                            {% if review.findings_count >= 10 %}bg-red-100 text-red-800
+                                            {% elif review.findings_count >= 5 %}bg-amber-100 text-amber-800
+                                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                            {{ review.findings_count }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-xs text-gray-300">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Duration -->
+                                    <td class="px-5 py-3.5 text-right">
+                                        <span class="text-xs font-mono text-gray-500">{{ "%.1f"|format(review.duration_seconds or 0) }}s</span>
+                                    </td>
+
+                                    <!-- Date -->
+                                    <td class="px-5 py-3.5 text-right">
+                                        <span class="text-xs text-gray-400">{{ review.created_at.strftime('%b %d, %H:%M') }}</span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="px-5 py-16 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                            </div>
+                                            <p class="text-sm font-medium text-gray-900 mb-1">No reviews yet</p>
+                                            <p class="text-xs text-gray-500 mb-4">Open a pull request on an installed repository to get started.</p>
+                                            <a href="https://github.com/apps/botrevyn/installations/new" target="_blank"
+                                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-700 transition-colors">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                Install on a Repo
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── SIDEBAR ─── -->
+            <div class="space-y-6">
+
+                <!-- Repositories -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-900">Repositories</h3>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        {% for stat in repo_stats %}
+                        <div class="px-5 py-3.5 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                </div>
+                                <div>
+                                    <a href="https://github.com/{{ stat.repo_full_name }}" target="_blank" class="text-sm font-medium text-gray-900 hover:text-brand-700 transition-colors">
+                                        {{ stat.repo_full_name.split('/')[1] }}
+                                    </a>
+                                    <p class="text-xs text-gray-400">{{ stat.review_count }} review{{ 's' if stat.review_count != 1 else '' }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {% if stat.changes_requested > 0 %}
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[0.6rem] font-bold bg-red-100 text-red-700">{{ stat.changes_requested }}</span>
+                                {% endif %}
+                                <span class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1 rounded text-[0.65rem] font-semibold bg-amber-50 text-amber-700">{{ stat.total_findings }}</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="px-5 py-8 text-center">
+                            <p class="text-xs text-gray-400">No repositories connected</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div class="p-4 space-y-2.5">
+                        <a href="https://github.com/apps/botrevyn/installations/new" target="_blank"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors group">
+                            <div class="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+                                <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            </div>
+                            <span class="font-medium">Install on New Repo</span>
+                        </a>
+                        <a href="https://github.com/settings/apps/botrevyn" target="_blank"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors group">
+                            <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </div>
+                            <span class="font-medium">App Settings</span>
+                        </a>
+                        <a href="/health" target="_blank"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors group">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                            </div>
+                            <span class="font-medium">Health Check</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- System Info -->
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-5 text-white shadow-sm">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></div>
+                        <span class="text-xs font-medium text-gray-300 uppercase tracking-wider">System Status</span>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Engine</span>
+                            <span class="font-mono text-xs text-gray-200">gemini-3.1-flash-lite</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Pipeline</span>
+                            <span class="font-mono text-xs text-gray-200">LangGraph v1</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Agents</span>
+                            <span class="font-mono text-xs text-gray-200">5 sequential</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-4">
+        <div class="border-t border-gray-200 pt-6 flex items-center justify-between text-xs text-gray-400">
+            <span>© 2026 BotRevyn — AI-Powered Code Review</span>
+            <span>Built with FastAPI · LangGraph · Gemini</span>
+        </div>
+    </footer>
+
+</body>
+</html>
