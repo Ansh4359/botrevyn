@@ -125,14 +125,59 @@ async def github_webhook(
         if not hmac.compare_digest(signature, x_hub_signature_256):
             raise HTTPException(status_code=400, detail="Invalid signature")
 
-    if x_github_event != "pull_request":
-        logger.info(f"Ignored event: {x_github_event}")
-        return {"message": "Ignored event type"}
-
     try:
         payload_dict = json.loads(body)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    if x_github_event in ("installation", "installation_repositories"):
+        try:
+            from app.db.session import SessionLocal
+            from app.db.models import AppInstallation, User
+            from sqlalchemy import func
+
+            db = SessionLocal()
+            inst_data = payload_dict.get("installation", {})
+            inst_id = inst_data.get("id")
+            account = inst_data.get("account", {})
+            account_name = account.get("login", "")
+            target_id = account.get("id", 0)
+            target_type = account.get("type", "User")
+            action = payload_dict.get("action", "")
+
+            if inst_id:
+                if action == "deleted":
+                    db.query(AppInstallation).filter(AppInstallation.installation_id == inst_id).delete()
+                    db.commit()
+                    logger.info(f"Removed AppInstallation {inst_id} for {account_name}")
+                else:
+                    user = db.query(User).filter(func.lower(User.username) == account_name.lower()).first()
+                    user_id = user.id if user else None
+                    existing = db.query(AppInstallation).filter(AppInstallation.installation_id == inst_id).first()
+                    if existing:
+                        existing.account_name = account_name
+                        existing.target_id = target_id
+                        existing.target_type = target_type
+                        if user_id:
+                            existing.user_id = user_id
+                    else:
+                        db.add(AppInstallation(
+                            installation_id=inst_id,
+                            target_id=target_id,
+                            target_type=target_type,
+                            account_name=account_name,
+                            user_id=user_id,
+                        ))
+                    db.commit()
+                    logger.info(f"Recorded AppInstallation {inst_id} for {account_name} (user_id={user_id})")
+            db.close()
+        except Exception as e:
+            logger.warning(f"Error handling installation event: {e}")
+        return {"message": "Installation event processed"}
+
+    if x_github_event != "pull_request":
+        logger.info(f"Ignored event: {x_github_event}")
+        return {"message": "Ignored event type"}
 
     action = payload_dict.get("action")
     if action not in ("opened", "synchronize", "reopened"):

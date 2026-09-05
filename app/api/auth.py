@@ -106,6 +106,41 @@ async def github_callback(request: Request, code: str, db: Session = Depends(get
             
         db.commit()
         db.refresh(user)
+
+        # Link any existing installations for this user
+        try:
+            from app.db.models import AppInstallation
+            from sqlalchemy import func
+            installs = db.query(AppInstallation).filter(
+                func.lower(AppInstallation.account_name) == username.lower()
+            ).all()
+            for inst in installs:
+                inst.user_id = user.id
+
+            # Sync from GitHub App if available
+            if settings.github_app_id and settings.github_private_key:
+                import github
+                pk = settings.github_private_key.replace("\\n", "\n")
+                gi = github.GithubIntegration(int(settings.github_app_id), pk)
+                for inst in gi.get_installations():
+                    acc = inst.raw_data.get("account", {})
+                    acc_login = acc.get("login", "")
+                    if acc_login.lower() == username.lower():
+                        existing = db.query(AppInstallation).filter(AppInstallation.installation_id == inst.id).first()
+                        if existing:
+                            existing.user_id = user.id
+                            existing.account_name = acc_login
+                        else:
+                            db.add(AppInstallation(
+                                installation_id=inst.id,
+                                target_id=acc.get("id", 0),
+                                target_type=acc.get("type", "User"),
+                                account_name=acc_login,
+                                user_id=user.id,
+                            ))
+            db.commit()
+        except Exception as e:
+            logger.warning(f"Could not link installations for {username}: {e}")
         
         # Create session (sub MUST be a string for JWT standard)
         jwt_token = create_access_token(data={"sub": str(user.id)})
