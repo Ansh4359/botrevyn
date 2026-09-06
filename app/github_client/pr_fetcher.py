@@ -33,55 +33,38 @@ class PRFetcher:
 
     def fetch_pr_context(self, repo_full_name: str, pr_number: int) -> PRContext:
         pr = self.github_client.get_pull_request(repo_full_name, pr_number)
-        
-        diff_url = pr.diff_url
-        
-        # If using app auth, we need to extract the token from the PyGithub Auth object
-        token = self.settings.github_token
-        if self.installation_id and hasattr(self.github_client.client._Github__requester.auth, 'token'):
-            token = self.github_client.client._Github__requester.auth.token
-            
-        headers = {
-            "Accept": "application/vnd.github.v3.diff",
-            "Authorization": f"Bearer {token}"
-        }
-        response = httpx.get(diff_url, headers=headers, follow_redirects=True)
-        response.raise_for_status()
-        
-        patch_set = PatchSet(response.text)
+        repo = self.github_client.get_repo(repo_full_name)
         
         file_diffs: List[FileDiff] = []
         file_contents: List[FileContent] = []
         
-        for patched_file in patch_set:
-            if patched_file.is_binary_file:
-                continue
-                
-            status = "modified" if patched_file.is_modified_file else ("added" if patched_file.is_added_file else "deleted")
+        for f in pr.get_files():
+            status = f.status or "modified"
+            patch_text = f.patch or ""
+            
             file_diff = FileDiff(
-                filename=patched_file.path,
+                filename=f.filename,
                 status=status,
-                additions=patched_file.added,
-                deletions=patched_file.removed,
-                patch=str(patched_file),
+                additions=f.additions or 0,
+                deletions=f.deletions or 0,
+                patch=patch_text,
             )
             file_diffs.append(file_diff)
             
-            if not patched_file.is_removed_file:
-                repo = self.github_client.get_repo(repo_full_name)
+            if status != "removed":
                 try:
-                    content_file = repo.get_contents(patched_file.path, ref=pr.head.sha)
+                    content_file = repo.get_contents(f.filename, ref=pr.head.sha)
                     if not isinstance(content_file, list):
-                        content = content_file.decoded_content.decode("utf-8")
-                        language = self._detect_language(patched_file.path)
+                        content = content_file.decoded_content.decode("utf-8", errors="replace")
+                        language = self._detect_language(f.filename)
                         file_contents.append(FileContent(
-                            path=patched_file.path,
+                            path=f.filename,
                             content=content,
                             language=language,
                             size=len(content),
                         ))
                 except Exception as e:
-                    logger.error(f"Error fetching content for {patched_file.path}: {e}")
+                    logger.warning(f"Error fetching content for {f.filename}: {e}")
 
         author = GitHubUser(
             login=pr.user.login,
